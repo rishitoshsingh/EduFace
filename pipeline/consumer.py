@@ -186,4 +186,4 @@ class RecognitionModel(multiprocessing.Process):
             #     self.buffer.clear()
             #     break
         # cv2.destroyAllWindows()
-        logging.info('Terminated ViewStream process')
+        logging.info('Terminated RecognitionModel process')
