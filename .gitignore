@@ -1,0 +1,8 @@
+**/__pycache__
+.vscode
+**/*.pyc
+edugrad-env
+
+frames/*.jpg
+*.log
+yt_videos.json

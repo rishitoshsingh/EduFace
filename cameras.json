@@ -1,0 +1,22 @@
+[
+    {
+        "cameraId": 101,
+        "location": "entry",
+        "uri": "rtsp://10.5.4.160:554/user=admin&password=123456&channel=0&stream=0.sdp?"
+    },
+    {
+        "cameraId": 102,
+        "location": "exit",
+        "uri": "rtsp://admin:abcd1234@10.5.4.92:554/Streaming/channels/2/preview"
+    },
+    {
+        "cameraId": 103,
+        "location": "exit",
+        "uri": "rtsp://admin:edugrad_123@10.5.4.142:554/Streaming/Channels/101"
+    },
+    {
+        "cameraId": 104,
+        "location": "exit",
+        "uri": "rtsp://admin:edugrad_123@10.5.4.15:554/Streaming/Channels/101"
+    }
+]

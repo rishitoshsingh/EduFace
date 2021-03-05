@@ -1,0 +1,5 @@
+{
+    "recognition_threshold": 0.45,
+    "confidence_threshold": 0.99,
+    "recognized_face_shape": [160, 160]
+}

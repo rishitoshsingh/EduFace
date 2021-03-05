@@ -1,0 +1,4 @@
+Download both files and keep it in same folder [ Inside data/model ]
+
+1. https://d24c4belkzmc2t.cloudfront.net/cdn-uploads/1599047235_facenet_keras.h5
+2. https://d24c4belkzmc2t.cloudfront.net/cdn-uploads/1599047274_facenet_keras_weights.h5
