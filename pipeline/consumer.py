@@ -5,7 +5,7 @@ import queue
 from datetime import datetime
 import numpy as np
 import logging
-
+import json
 from models import Frame
 # from pipeline.buffer import Buffer
 
@@ -113,10 +113,9 @@ class RecognitionModel(multiprocessing.Process):
         logging.info('Created RecognitionModel process')
 
     def _recognize(self, detector_model, encoder_model, img: np.ndarray):
-        # img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img_rgb = img.copy()
-        print(img_rgb.shape)
-        results = detector_model.detect_faces(img_rgb)
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        with self.sess.graph.as_default():
+            results = detector_model.detect_faces(img_rgb)
         for res in results:
             if res['confidence'] < self.detection_config['confidence_threshold']:
                 continue
@@ -131,9 +130,9 @@ class RecognitionModel(multiprocessing.Process):
                 if dist < self.detection_config['recognition_threshold'] and dist < distance:
                     name = db_name
                     distance = dist
-            cv2.rectangle(img, pt_1, pt_2, (255, 0, 0), 2)
-            cv2.putText(img, name, (pt_1[0], pt_1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 200), 2)
-        return img
+            cv2.rectangle(img_rgb, pt_1, pt_2, (255, 0, 0), 2)
+            cv2.putText(img_rgb, name, (pt_1[0], pt_1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 200), 2)
+        return img_rgb, len(results)
     
     def _get_face(self, frame: Frame, box: tuple):
         x1, y1, width, height = box
@@ -145,7 +144,8 @@ class RecognitionModel(multiprocessing.Process):
     def _get_encoding(self, encoder_model, face):
         face = self._normalize(face)
         face = cv2.resize(face, tuple(self.detection_config['recognized_face_shape']))
-        encoding = encoder_model.predict(np.expand_dims(face, axis=0))[0]
+        with self.sess.graph.as_default():
+            encoding = encoder_model.predict(np.expand_dims(face, axis=0))[0]
         return encoding
 
     def _normalize(self, img):
@@ -173,15 +173,17 @@ class RecognitionModel(multiprocessing.Process):
             # img = Image.fromarray(frame.numpy().reshape(frame.get_shape()))
             img = Image.fromarray(frame.numpy())
             img = np.array(img)
-            logging.info('Recognizing in {}'.format(frame))
-            img = self._recognize(detector_model, encoder_model, img)
-            # cv2.imwrite('frames/{}.jpg'.format(frame.get_timestamp_fmt()), img) 
-
-            cv2.imshow('{}'.format(frame.get_camera()),img)
-            k = cv2.waitKey(1)
-            if k==27:
-                self._running = False
-                self.buffer.clear()
-                break
-        cv2.destroyAllWindows()
+            img, results = self._recognize(detector_model, encoder_model, img)
+            if not results:
+                cv2.imwrite('frames/{}.jpg'.format(frame.get_timestamp_fmt()), img)
+            else:
+                pass
+            self.buffer.task_done()
+            # cv2.imshow('{}'.format(frame.get_camera()),img)
+            # k = cv2.waitKey(1)
+            # if k==27:
+            #     self._running = False
+            #     self.buffer.clear()
+            #     break
+        # cv2.destroyAllWindows()
         logging.info('Terminated ViewStream process')

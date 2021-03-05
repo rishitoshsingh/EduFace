@@ -18,6 +18,7 @@ import json
 
 # 24fps * seconds = 14400
 buffer = multiprocessing.JoinableQueue(14400)
+# buffer = multiprocessing.Queue(14400)
 consumer_process_ready = multiprocessing.Event()
 producer_process_ready = multiprocessing.Event()
 consumer_quit_event = multiprocessing.Event()
@@ -48,8 +49,8 @@ for camera_d in cameras_dicts:
 # consumer_process_ready = multiprocessing.Event()
 
 # creating and starting consumer process 
-consumer_quit_event = multiprocessing.Event()
-consumer_process = consumer.SaveFrames(buffer, quit_event=consumer_quit_event, directory='frames/')
+# consumer_quit_event = multiprocessing.Event()
+# consumer_process = consumer.SaveFrames(buffer, quit_event=consumer_quit_event, directory='frames/')
 # consumer_process = consumer.ViewStream(buffer, consumer_quit_event)
 
 
@@ -64,12 +65,12 @@ time.sleep(5)
 for _, event in producer_quit_events.items():
     event.set()
 
+# buffer.close()
 buffer.join()
-print('buffer joined')
+print('Buffer Cleared')
 consumer_quit_event.set()
 print('consumes_quit_event set')
 buffer.close()
-print('buffer closed')
 
 
 # for _, process in producer_processes.items():
