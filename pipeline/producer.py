@@ -19,7 +19,7 @@ from models import Frame, Camera
 import logging
 
 class StreamCamera(multiprocessing.Process):
-    def __init__(self, camera: Camera, buffer: multiprocessing.JoinableQueue, quit_event: multiprocessing.Event, max_idle: int = 14400):
+    def __init__(self, camera: Camera, buffer: multiprocessing.JoinableQueue, quit_event: multiprocessing.Event, max_idle: int = 14400, daemon=None):
         """Iniitalize StreamCamera object
 
         Args:
@@ -28,7 +28,7 @@ class StreamCamera(multiprocessing.Process):
             quit_event (multiprocessing.Event): used to trigger process to stop
             max_idle (int, optional): to trigger process to stop if no frame is received for max_idle times (default: 14400 fames or 10 minutes ) 
         """
-        super(StreamCamera,self).__init__(name=camera.get_location())
+        super(StreamCamera,self).__init__(name=camera.get_location(), daemon=daemon)
         logging.info('Creating StreamCamera process for {}'.format(camera))
         self.camera = camera
         self.buffer = buffer
@@ -55,6 +55,7 @@ class StreamCamera(multiprocessing.Process):
                     logging.info('No frames received for {} seconds, terminating StreamCamera for {}'.format(self.MAX_IDLE, self.camera))
                     break
                 continue
+            self.current_idle = 0
             # for extracting frame shape
             caps_format = sample.get_caps().get_structure(0)  # Gst.Structure
             frmt_str = caps_format.get_value('format') 
