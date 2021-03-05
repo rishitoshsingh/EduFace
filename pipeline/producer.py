@@ -70,7 +70,7 @@ class StreamCamera(multiprocessing.Process):
             frame_array = np.squeeze(frame_array)  
 
             frame = Frame(self.camera, datetime.now(), frame_array, shape)
-            self.buffer.put(frame,self.camera)
+            self.buffer.put(frame)
         
         # shanging state of elements if proces is terminated
         self.pipeline.set_state(Gst.State.NULL)

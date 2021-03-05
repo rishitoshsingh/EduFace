@@ -6,27 +6,11 @@ from models import Camera
 import time
 import json
 import multiprocessing
-# from multiprocessing import Process, Queue, Event
 
-# from mtcnn.mtcnn import MTCNN
-# from tensorflow.keras.models import load_model, Model
-# import os
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-# import warnings
-# warnings.filterwarnings("ignore", message = "Passing", category = FutureWarning)
-
-# # loading models
-
-# detector_model = MTCNN()
-# encoder_model = load_model(encoder_model)
-
-# buffer to store frames from all cameras
-# buffer = buffer.Buffer()
 buffer = multiprocessing.JoinableQueue(14400)
 
 # reading cameras details
-# with open('cameras.json','r') as file:
-with open('yt_videos.json','r') as file:
+with open('cameras.json','r') as file:
     cameras_dicts = json.load(file)
 
 # creating cameras objects and producer process
