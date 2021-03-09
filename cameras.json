@@ -1,7 +1,12 @@
 [
     {
-        "cameraId": 104,
-        "location": "exit",
+        "cameraId": 101,
+        "location": "entry",
         "uri": "rtsp://admin:edugrad_123@10.5.4.142:554/Streaming/Channels/101"
+    },
+	{
+        "cameraId": 102,
+        "location": "exit",
+        "uri": "rtsp://admin:edugrad_123@10.5.4.15:554/Streaming/Channels/101"
     }
 ]

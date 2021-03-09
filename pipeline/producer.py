@@ -19,7 +19,7 @@ from models import Frame, Camera
 import logging
 
 class StreamCamera(multiprocessing.Process):
-    def __init__(self, camera: Camera, buffer: multiprocessing.JoinableQueue, quit_event: multiprocessing.Event, max_idle: int = 14400, daemon=None):
+    def __init__(self, camera: Camera, buffer: multiprocessing.JoinableQueue, quit_event: multiprocessing.Event, max_idle: int = 14400):
         """Iniitalize StreamCamera object
 
         Args:
@@ -28,7 +28,7 @@ class StreamCamera(multiprocessing.Process):
             quit_event (multiprocessing.Event): used to trigger process to stop
             max_idle (int, optional): to trigger process to stop if no frame is received for max_idle times (default: 14400 fames or 10 minutes ) 
         """
-        super(StreamCamera,self).__init__(name=camera.get_location(), daemon=daemon)
+        super(StreamCamera,self).__init__(name=camera.get_location())
         logging.info('Creating StreamCamera process for {}'.format(camera))
         self.camera = camera
         self.buffer = buffer
@@ -39,7 +39,7 @@ class StreamCamera(multiprocessing.Process):
         # self.Gthread = Thread(target=self.main_loop.run)
         # self.Gthread.start()
         # self.pipeline = Gst.parse_launch("rtspsrc location={} ! autovideosink".format(self.camera.get_stream()))
-        pipeline_str = "uridecodebin uri={} uridecodebin0::source::latency=300 ! videoconvert !  video/x-raw, format=RGB ! appsink name={}".format(self.camera.get_stream(), self.camera.get_id())
+        pipeline_str = "uridecodebin uri={} uridecodebin0::source::latency=300 ! videoscale ! video/x-raw,width=640,height=480 ! videoconvert !  video/x-raw, format=RGB ! appsink name={}".format(self.camera.get_stream(), self.camera.get_id())
         # pipeline_str = "rtspsrc location={} ! queue ! rtph265depay ! h265parse ! avdec_h265 ! videoconvert !  video/x-raw, format=RGB ! appsink name={}".format(self.camera.get_stream(), self.camera.get_id())
         self.pipeline = Gst.parse_launch(pipeline_str)
         self.appsink = self.pipeline.get_by_name("{}".format(self.camera.get_id()))
