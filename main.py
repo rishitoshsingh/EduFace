@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-logging.basicConfig(filename='eduface.log', format='%(levelname)s - %(processName)s : %(funcName)s - %(message)s', level=logging.INFO)
+logging.basicConfig(filename='eduface.log', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 logging.info('====================================================================\n\n\nEduFace started at {}'.format(datetime.now()))
 
 from pipeline.manager import RecognitionManager
@@ -18,6 +18,11 @@ with open('cameras.json','r') as file:
 encoder_model_path='data/model/facenet_keras.h5'
 manager = RecognitionManager(cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER=14400)
 manager.start()
-time.sleep(20)
+try:
+    print('Running EduFace, Press ctrl+C to exit')
+    while True:
+        pass
+except KeyboardInterrupt:
+    print('CLosing EduFace')
 manager.terminate()
 manager.kill()
