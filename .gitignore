@@ -4,5 +4,7 @@
 edugrad-env
 
 frames/*.jpg
+attendance/**
+batches/**
 *.log
 yt_videos.json

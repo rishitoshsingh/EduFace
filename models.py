@@ -1,3 +1,6 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 class Camera:
     """Data class to store camera details
     """
