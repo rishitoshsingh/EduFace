@@ -8,3 +8,4 @@ attendance/**
 batches/**
 *.log
 yt_videos.json
+temp.py
