@@ -43,6 +43,8 @@ class StreamCamera(multiprocessing.Process):
         self.camera = camera
         self.motion_trigger_coordinates = [tuple(motion_config['corner_1']), tuple(motion_config['corner_2']) ]
         self.motion_trigger_area_fraction = 0.5
+        width, height = abs(self.motion_trigger_coordinates[0][0] - self.motion_trigger_coordinates[1][0]), abs(self.motion_trigger_coordinates[0][1] - self.motion_trigger_coordinates[1][1]) 
+        self.detection_area_threshold = abs(0.5*width*height)
         self.motion_detected = False 
         self.motion_timeout = None
         self.buffer = buffer
@@ -69,11 +71,11 @@ class StreamCamera(multiprocessing.Process):
         for contour in contours:
             (x, y, w, h) = cv2.boundingRect(contour)
             area = w*h
-            if area < detection_area_threshold:
+            if area < self.detection_area_threshold:
                 continue
-            frame_cp = old_image.copy()
             self.motion_detected = True
-            self.motion_timeout = datetime.now() + timedelta(seconds=3)
+            logging.info('Motion detected in {}'.format(self.camera))
+            self.motion_timeout = datetime.now() + timedelta(minutes=1)
             return True
         return False
 
@@ -93,7 +95,7 @@ class StreamCamera(multiprocessing.Process):
         image = np.squeeze(image)
         image = Image.fromarray(image)
         image = np.array(image)
-        return image_rgb, shape
+        return image, shape
     
     def crop_image(self, image: np.ndarray):
         return image[self.motion_trigger_coordinates[0][1] : self.motion_trigger_coordinates[1][1], self.motion_trigger_coordinates[0][0] : self.motion_trigger_coordinates[1][0] ]
@@ -107,16 +109,18 @@ class StreamCamera(multiprocessing.Process):
         next_fps_counter_time = current_fps_counter_time + timedelta(minutes=FPS_COUNTER_INTERVAL)
         received_frames = 0
         
-        
-        
         # for extracting first frame
-        old_sample = self.appsink.try_pull_sample(Gst.SECOND)
-        if old_sample is None:
-            self.current_idle += 1
-            if self.current_idle > self.MAX_IDLE:
-                logging.info('No frames received for {} seconds, terminating StreamCamera for {}'.format(self.MAX_IDLE, self.camera))
+        while True:
+            old_sample = self.appsink.try_pull_sample(Gst.SECOND)
+            if old_sample is None:
+                self.current_idle += 1
+                if self.current_idle > self.MAX_IDLE:
+                    logging.info('No frames received for {} seconds, terminating StreamCamera for {}'.format(self.MAX_IDLE, self.camera))
+                    self.quit_event.set()
+                    break
+                continue
+            else:
                 break
-            continue
         self.current_idle = 0
         
         old_image, shape = self.get_image_from_sample(old_sample)
@@ -136,9 +140,12 @@ class StreamCamera(multiprocessing.Process):
             cropped_image = self.crop_image(image)
             
             if ( self.motion_detected or self.detect_motion(cropped_old_image, cropped_image) ) and (datetime.now() >= self.motion_timeout):
-
                 frame = Frame(self.camera, datetime.now(), cropped_image, cropped_image.shape)
                 self.buffer.put(frame)
+            else:
+                self.motion_detected = False
+            
+            cropped_old_image = cropped_image
 
             received_frames += 1
             if datetime.now() >= next_fps_counter_time:

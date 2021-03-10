@@ -5,6 +5,7 @@ edugrad-env
 
 frames/*.jpg
 attendance/**
+camera_ftp/*
 motion_detected/**
 batches/**
 *.log

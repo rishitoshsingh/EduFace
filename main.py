@@ -8,7 +8,6 @@ logging.info('==================================================================
 
 from pipeline.manager import RecognitionManager, BatchRecognitionManager, BatchPicklingManager
 import json
-import time
 
 # reading detection_config file
 with open('detection_config.json','r') as file:
@@ -24,7 +23,7 @@ with open('motion_configs.json','r') as file:
 encoder_model_path = 'data/model/facenet_keras.h5'
 # manager = RecognitionManager(cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER = 14400)
 # manager = BatchRecognitionManager(cameras_dicts, motion_configs, detection_config, encoder_model_path, MAX_BUFFER = 500)
-manager = BatchPicklingManager(cameras_dicts, MAX_BUFFER = 500)
+manager = BatchPicklingManager(cameras_dicts, motion_configs, MAX_BUFFER = 500)
 manager.start()
 
 try:
