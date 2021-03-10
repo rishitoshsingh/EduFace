@@ -21,7 +21,7 @@ from models import Frame, Camera
 import logging
 
 class StreamCamera(multiprocessing.Process):
-    def __init__(self, camera: Camera, buffer: multiprocessing.JoinableQueue, quit_event: multiprocessing.Event, max_idle: int = 14400):
+    def __init__(self, camera: Camera, motion_config: dict, buffer: multiprocessing.JoinableQueue, quit_event: multiprocessing.Event, max_idle: int = 14400):
         """Iniitalize StreamCamera object
 
         Args:
