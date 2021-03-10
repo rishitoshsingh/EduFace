@@ -18,9 +18,12 @@ with open('detection_config.json','r') as file:
 with open('cameras.json','r') as file:
     cameras_dicts = json.load(file)
     
+with open('motion_configs.json','r') as file:
+    motion_configs = json.load(file)
+    
 encoder_model_path = 'data/model/facenet_keras.h5'
 # manager = RecognitionManager(cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER = 14400)
-# manager = BatchRecognitionManager(cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER = 500)
+# manager = BatchRecognitionManager(cameras_dicts, motion_configs, detection_config, encoder_model_path, MAX_BUFFER = 500)
 manager = BatchPicklingManager(cameras_dicts, MAX_BUFFER = 500)
 manager.start()
 

@@ -65,5 +65,5 @@ for camera in cameras:
         cap.stop()
         cv2.destroyAllWindows()
 
-with open('motion_boxes_temp.json','w') as file:
+with open('motion_configs_temp.json','w') as file:
     json.dump(motion_boxes, file, indent=4)

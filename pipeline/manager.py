@@ -71,7 +71,7 @@ class RecognitionManager:
         
         
 class BatchRecognitionManager:
-    def __init__(self, cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER=14400, BATCH_SIZE=128):
+    def __init__(self, cameras_dicts, motion_configs, detection_config, encoder_model_path, MAX_BUFFER=14400, BATCH_SIZE=128):
         self.MAX_BUFFER = MAX_BUFFER
         self.BATCH_SIZE = BATCH_SIZE
         self.camera_batcher_buffer = multiprocessing.JoinableQueue(MAX_BUFFER)
@@ -95,9 +95,10 @@ class BatchRecognitionManager:
         self.cameras = []
         for camera_d in cameras_dicts:
             c = Camera(**camera_d)
+            motion_config = motion_configs[str(c.get_id())]
             self.cameras.append(c)
             quit_event = multiprocessing.Event()
-            self.producer_processes[c.get_id] = StreamCamera(c, self.camera_batcher_buffer, quit_event, max_idle=60)
+            self.producer_processes[c.get_id] = StreamCamera(c, motion_config, self.camera_batcher_buffer, quit_event, max_idle=60)
             self.producer_quit_events[c.get_id] = quit_event
 
         self.batcher_consumer_process = BatchGeneratorAndPiclker(self.camera_batcher_buffer,
