@@ -5,7 +5,6 @@ edugrad-env
 
 frames/*.jpg
 attendance/**
+motion_detected/**
 batches/**
 *.log
-yt_videos.json
-temp.py
