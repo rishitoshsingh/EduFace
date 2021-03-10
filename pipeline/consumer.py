@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 import queue
 import multiprocessing
 import pickle
-warnings.filterwarnings("ignore", message="Passing", category=FutureWarning)
+warnings.filterwarnings("ignore", message = "Passing", category = FutureWarning)
 
 
 class SaveFrames(multiprocessing.Process):
@@ -106,10 +106,11 @@ class BatchGeneratorAndPiclker(multiprocessing.Process):
                 consumed_frames = 0
             
             if batch['num_frames'] == self.BATCH_SIZE:
-                file_name = self.directory + 'batch-{}'.format(batch['id']) + '({})'.format(batch['timestamp'].strftime('%-d %b %-y, %-I:%-M %p (%f)')) + '.pickle'
+                file_name = self.directory + 'batch-{}'.format(batch['id']) + ' ({})'.format(batch['timestamp'].strftime('%-d %b %-y, %-I:%-M %p (%f)')) + '.pickle'
                 with open(file_name, 'wb') as file:
                     pickle.dump(batch, file)
-                self.outBuffer.put(file_name)
+                if self.outBuffer is not None:
+                    self.outBuffer.put(file_name)
                 batch_count += 1
                 batch = self._generate_batch(batch_count)
                 

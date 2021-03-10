@@ -6,7 +6,7 @@ import logging
 logging.basicConfig(filename='eduface.log', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 logging.info('====================================================================\n\n\nEduFace started at {}'.format(datetime.now()))
 
-from pipeline.manager import RecognitionManager, BatchRecognitionManager
+from pipeline.manager import RecognitionManager, BatchRecognitionManager, BatchPicklingManager
 import json
 import time
 
@@ -20,7 +20,8 @@ with open('cameras.json','r') as file:
     
 encoder_model_path = 'data/model/facenet_keras.h5'
 # manager = RecognitionManager(cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER = 14400)
-manager = BatchRecognitionManager(cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER = 500)
+# manager = BatchRecognitionManager(cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER = 500)
+manager = BatchPicklingManager(cameras_dicts, MAX_BUFFER = 500)
 manager.start()
 
 try:

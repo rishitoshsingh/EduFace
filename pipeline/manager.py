@@ -146,3 +146,50 @@ class BatchRecognitionManager:
             event.set()
         self.batcher_consumer_quit_event.set()
         self.recognition_consumer_quit_event.set()
+        
+class BatchPicklingManager:
+    def __init__(self, cameras_dicts, MAX_BUFFER=14400, BATCH_SIZE=128):
+        self.MAX_BUFFER = MAX_BUFFER
+        self.BATCH_SIZE = BATCH_SIZE
+        self.camera_batcher_buffer = multiprocessing.JoinableQueue(MAX_BUFFER)
+
+        # creating events
+        self.recognition_consumer_process_ready = multiprocessing.Event()
+        self.producers_process_ready = multiprocessing.Event()
+        self.batcher_consumer_quit_event = multiprocessing.Event()
+        
+        # creating producers
+        self.producer_processes = {}
+        self.producer_quit_events = {}
+        self.cameras = []
+        for camera_d in cameras_dicts:
+            c = Camera(**camera_d)
+            self.cameras.append(c)
+            quit_event = multiprocessing.Event()
+            self.producer_processes[c.get_id] = StreamCamera(c, self.camera_batcher_buffer, quit_event, max_idle=60)
+            self.producer_quit_events[c.get_id] = quit_event
+
+        self.batcher_consumer_process = BatchGeneratorAndPiclker(self.camera_batcher_buffer,
+                                                                 self.BATCH_SIZE,
+                                                                 None,
+                                                                 self.batcher_consumer_quit_event)
+            
+    def start(self):
+        # starting all producer processes
+        for _, process in self.producer_processes.items():
+            process.start()
+        self.producers_process_ready.set()
+        self.batcher_consumer_process.start()
+    
+    def kill(self):
+        self.camera_batcher_buffer.close()
+    
+    def terminate(self):
+        # terminatinf encoding updater thread
+        self.kill_encoding_updater_thread.set()
+        self.encoding_updater_thread.join()
+        
+        # terminating producers and consumer processs
+        for _, event in self.producer_quit_events.items():
+            event.set()
+        self.batcher_consumer_quit_event.set()
