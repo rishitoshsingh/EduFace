@@ -60,7 +60,16 @@ class StreamCamera(multiprocessing.Process):
         self.pipeline = Gst.parse_launch(pipeline_str)
         self.appsink = self.pipeline.get_by_name("{}".format(self.camera.get_id()))
         
-    def detect_motion(self, old_image, new_image):
+    def _detect_motion(self, old_image, new_image):
+        """function to detect motion
+
+        Args:
+            old_image (np.ndarray): old cropped image 
+            new_image (np.ndarray): current cropped image
+
+        Returns:
+            bool: wether motion was detected or not
+        """
         diff = cv2.absdiff(old_image, new_image)
         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5,5), 0)
@@ -79,7 +88,15 @@ class StreamCamera(multiprocessing.Process):
             return True
         return False
 
-    def get_image_from_sample(self, sample:Gst.Sample):
+    def _get_image_from_sample(self, sample:Gst.Sample):
+        """Retreive image from Gst.Sample
+
+        Args:
+            sample (Gst.Sample): sample object received from gstream pipeline
+
+        Returns:
+            np.ndarray, tuple: image and it shape of image
+        """
         # for extracting frame shape
         caps_format = sample.get_caps().get_structure(0)  # Gst.Structure
         frmt_str = caps_format.get_value('format') 
@@ -97,7 +114,15 @@ class StreamCamera(multiprocessing.Process):
         image = np.array(image)
         return image, shape
     
-    def crop_image(self, image: np.ndarray):
+    def _crop_image(self, image: np.ndarray):
+        """crop required area from image 
+
+        Args:
+            image (np.ndarray): full resolution image
+
+        Returns:
+            np.ndarray: cropped image 
+        """
         return image[self.motion_trigger_coordinates[0][1] : self.motion_trigger_coordinates[1][1], self.motion_trigger_coordinates[0][0] : self.motion_trigger_coordinates[1][0] ]
 
     def run(self):
@@ -124,8 +149,8 @@ class StreamCamera(multiprocessing.Process):
                 break
         self.current_idle = 0
         
-        old_image, shape = self.get_image_from_sample(old_sample)
-        cropped_old_image = self.crop_image(old_image)
+        old_image, shape = self._get_image_from_sample(old_sample)
+        cropped_old_image = self._crop_image(old_image)
         
         while not self.quit_event.is_set():
             sample = self.appsink.try_pull_sample(Gst.SECOND)
@@ -137,10 +162,10 @@ class StreamCamera(multiprocessing.Process):
                 continue
             self.current_idle = 0
             
-            image, shape = self.get_image_from_sample(sample)
-            cropped_image = self.crop_image(image)
+            image, shape = self._get_image_from_sample(sample)
+            cropped_image = self._crop_image(image)
             
-            if ( self.motion_detected or self.detect_motion(cropped_old_image, cropped_image) ) and (datetime.now() <= self.motion_timeout):
+            if ( self.motion_detected or self._detect_motion(cropped_old_image, cropped_image) ) and (datetime.now() <= self.motion_timeout):
                 frame = Frame(self.camera, datetime.now(), cropped_image, cropped_image.shape)
                 self.buffer.put(frame)
                 sent_frames += 1

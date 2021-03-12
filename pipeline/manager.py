@@ -11,6 +11,8 @@ import multiprocessing
 import threading
 
 class RecognitionManager:
+    """Manager to create, manage and terminate producer, buffer and consumer. (currently not used in EduFace pipeline)
+    """
     def __init__(self, cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER=14400):
         self.MAX_BUFFER = MAX_BUFFER
         self.buffer = multiprocessing.JoinableQueue(MAX_BUFFER)
@@ -42,6 +44,8 @@ class RecognitionManager:
             pass
         
     def set_update_encoding_event(self):
+        """function to set update encoding event which is used in recognition consumer
+        """
         while not self.kill_encoding_updater_thread.is_set():
             if datetime.now() >= self.next_update_time:
                 self.update_encodings.set()
@@ -71,6 +75,8 @@ class RecognitionManager:
         
         
 class BatchRecognitionManager:
+    """This manager will create a pipeline consisting of StreamCamera producers, BatchGeneratorAndPiclker consumer and RecognitionModel consumer
+    """
     def __init__(self,
                  cameras_dicts: dict,
                  motion_configs: dict,
@@ -79,6 +85,17 @@ class BatchRecognitionManager:
                  MAX_BUFFER=14400,
                  BATCH_SIZE=128,
                  BATCH_TIMEOUT_MINUTES=1):
+        """Create manager object
+
+        Args:
+            cameras_dicts (dict): camera details (read from cameras.json)
+            motion_configs (dict): motion detection configs (read from motion_configs.json)
+            detection_config (dict): detection config (read from detection_config.json)
+            encoder_model_path (str): trained encoder model path
+            MAX_BUFFER (int, optional): buffer size. Defaults to 14400.
+            BATCH_SIZE (int, optional): batch size. Defaults to 128.
+            BATCH_TIMEOUT_MINUTES (int, optional): batch timeout in minutes. Defaults to 1.
+        """
         self.MAX_BUFFER = MAX_BUFFER
         self.BATCH_SIZE = BATCH_SIZE
         self.BATCH_TIMEOUT_MINUTES = BATCH_TIMEOUT_MINUTES
@@ -158,12 +175,23 @@ class BatchRecognitionManager:
         self.recognition_consumer_quit_event.set()
         
 class BatchPicklingManager:
+    """Manager which will create a pipeline consisting of StreamCamera producers and BatchGeneratorAndPiclker consumer
+    """
     def __init__(self,
                  cameras_dicts: dict,
                  motion_configs: dict,
                  MAX_BUFFER=14400,
                  BATCH_SIZE=128,
                  BATCH_TIMEOUT_MINUTES=1):
+        """Create manager object
+
+        Args:
+            cameras_dicts (dict): camera details (read from cameras.json)
+            motion_configs (dict): motion detection configs (read from motion_configs.json)
+            MAX_BUFFER (int, optional): buffer size. Defaults to 14400. Defaults to 14400.
+            BATCH_SIZE (int, optional): batch size. Defaults to 128. Defaults to 128.
+            BATCH_TIMEOUT_MINUTES (int, optional): batch timeout in minutes. Defaults to 1.
+        """
         self.MAX_BUFFER = MAX_BUFFER
         self.BATCH_SIZE = BATCH_SIZE
         self.BATCH_TIMEOUT_MINUTES = BATCH_TIMEOUT_MINUTES

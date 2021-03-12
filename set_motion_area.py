@@ -17,17 +17,18 @@ for camera_d in cameras_dicts:
     cameras.append(c)
 
 motion_boxes = {}
-
+motion_box = {
+    'corner_1': [0,0],
+    'corner_2': list(RESOLUTION)
+}
+        
 for camera in cameras:
     cap = VideoStream(camera.get_stream()).start()
     try:
         frame = cap.read()
         frame = cv2.resize(frame, RESOLUTION)
         (height, width) = frame.shape[:2]
-        motion_box = {
-            'corner_1': [0,0],
-            'corner_2': [width, height]
-        }
+        # motion_box['corner_2'] = [width, height]
         while True:
             frame = cap.read()
             frame = cv2.resize(frame, RESOLUTION)
