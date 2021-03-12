@@ -71,9 +71,17 @@ class RecognitionManager:
         
         
 class BatchRecognitionManager:
-    def __init__(self, cameras_dicts, motion_configs, detection_config, encoder_model_path, MAX_BUFFER=14400, BATCH_SIZE=128):
+    def __init__(self,
+                 cameras_dicts: dict,
+                 motion_configs: dict,
+                 detection_config: dict,
+                 encoder_model_path: str,
+                 MAX_BUFFER=14400,
+                 BATCH_SIZE=128,
+                 BATCH_TIMEOUT_MINUTES=1):
         self.MAX_BUFFER = MAX_BUFFER
         self.BATCH_SIZE = BATCH_SIZE
+        self.BATCH_TIMEOUT_MINUTES = BATCH_TIMEOUT_MINUTES
         self.camera_batcher_buffer = multiprocessing.JoinableQueue(MAX_BUFFER)
         self.batcher_recognition_buffer = multiprocessing.JoinableQueue(MAX_BUFFER)
 
@@ -103,6 +111,7 @@ class BatchRecognitionManager:
 
         self.batcher_consumer_process = BatchGeneratorAndPiclker(self.camera_batcher_buffer,
                                                                  self.BATCH_SIZE,
+                                                                 self.BATCH_TIMEOUT_MINUTES,
                                                                  self.batcher_recognition_buffer,
                                                                  self.batcher_consumer_quit_event)
             
@@ -149,9 +158,15 @@ class BatchRecognitionManager:
         self.recognition_consumer_quit_event.set()
         
 class BatchPicklingManager:
-    def __init__(self, cameras_dicts, motion_configs, MAX_BUFFER=14400, BATCH_SIZE=128):
+    def __init__(self,
+                 cameras_dicts: dict,
+                 motion_configs: dict,
+                 MAX_BUFFER=14400,
+                 BATCH_SIZE=128,
+                 BATCH_TIMEOUT_MINUTES=1):
         self.MAX_BUFFER = MAX_BUFFER
         self.BATCH_SIZE = BATCH_SIZE
+        self.BATCH_TIMEOUT_MINUTES = BATCH_TIMEOUT_MINUTES
         self.camera_batcher_buffer = multiprocessing.JoinableQueue(MAX_BUFFER)
 
         # creating events
@@ -173,6 +188,7 @@ class BatchPicklingManager:
 
         self.batcher_consumer_process = BatchGeneratorAndPiclker(self.camera_batcher_buffer,
                                                                  self.BATCH_SIZE,
+                                                                 self.BATCH_TIMEOUT_MINUTES,
                                                                  None,
                                                                  self.batcher_consumer_quit_event)
             

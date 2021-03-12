@@ -1,10 +1,12 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import datetime
+import numpy as np
 
 class Camera:
     """Data class to store camera details
     """
-    def __init__(self, cameraId, location, uri):
+    def __init__(self, cameraId: int, location: str, uri: str):
         """Initialize camera object 
 
         Args:
@@ -38,7 +40,7 @@ class Camera:
 class Frame():
     """Data class to store frame details
     """
-    def __init__(self, camera, timestamp, array, shape):
+    def __init__(self, camera: Camera, timestamp: datetime.datetime, array: np.ndarray, shape: tuple):
         """Iniitalize Frame objecct
 
         Args:
@@ -57,6 +59,9 @@ class Frame():
     
     def numpy(self):
         return self.array
+    
+    def datetime(self):
+        return self.timestamp
     
     def get_shape(self):
         return self.shape

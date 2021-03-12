@@ -54,7 +54,13 @@ class SaveFrames(multiprocessing.Process):
 class BatchGeneratorAndPiclker(multiprocessing.Process):
     """This consumer read all frames from inBuffer, generate batches and pickel them into disks. These pickeled batch file names are inserted in outBuffer.
     """
-    def __init__(self, inBuffer: multiprocessing.JoinableQueue, batch_size: int, outBuffer: multiprocessing.JoinableQueue, quit_event: multiprocessing.Event, directory='batches/'):
+    def __init__(self,
+                 inBuffer: multiprocessing.JoinableQueue,
+                 batch_size: int,
+                 batch_timeout_minutes:int,
+                 outBuffer: multiprocessing.JoinableQueue,
+                 quit_event: multiprocessing.Event,
+                 directory='batches/'):
         """Iniitalize Consumer object
 
         Args:
@@ -68,6 +74,7 @@ class BatchGeneratorAndPiclker(multiprocessing.Process):
         logging.info('Creating BatchGeneratorAndPiclker process')
         self.inBuffer = inBuffer
         self.BATCH_SIZE = batch_size
+        self.BATCH_TIMEOUT_MINUTES = batch_timeout_minutes
         self.quit_event = quit_event
         self.outBuffer = outBuffer
         self.directory = directory
@@ -76,6 +83,7 @@ class BatchGeneratorAndPiclker(multiprocessing.Process):
         batch = {}
         batch['id'] = batch_id
         batch['timestamp'] = datetime.now()
+        batch['end_timestamp'] = datetime.now() + timedelta(minutes=self.BATCH_TIMEOUT_MINUTES)
         batch['batch_size'] = self.BATCH_SIZE
         batch['num_frames'] = 0
         batch['frames'] = []
@@ -105,7 +113,7 @@ class BatchGeneratorAndPiclker(multiprocessing.Process):
                 next_fps_counter_time = current_fps_counter_time + timedelta(minutes=FPS_COUNTER_INTERVAL)
                 consumed_frames = 0
             
-            if batch['num_frames'] == self.BATCH_SIZE:
+            if batch['num_frames'] == self.BATCH_SIZE or batch['end_timestamp'] <= datetime.now():
                 file_name = self.directory + 'batch-{}'.format(batch['id']) + ' ({})'.format(batch['timestamp'].strftime('%-d %b %-y, %-I:%-M %p (%f)')) + '.pickle'
                 with open(file_name, 'wb') as file:
                     pickle.dump(batch, file)
@@ -235,7 +243,7 @@ class RecognitionModel(multiprocessing.Process):
         mycursor.execute(sql, val)
         mydb.commit()
 
-    def _update_known_attendance(self, name: str, camera: Camera, file_name: str):
+    def _update_known_attendance(self, name: str, frame:Frame, camera: Camera, file_name: str):
         mydb = self._get_mysql_connection()
         mycursor = mydb.cursor()
         sql = "SELECT id FROM labours id where name = %s"
@@ -245,15 +253,15 @@ class RecognitionModel(multiprocessing.Process):
 
         sql = """INSERT INTO attendances (labour_id, camera, location, timestamp, photo, created_at) VALUES (%s, %s, %s, %s, %s, %s)"""
         val = (labour_id, camera.get_id(), camera.get_location(),
-               datetime.now(), file_name, datetime.now())
+               frame.datetime(), file_name, datetime.now())
         mycursor.execute(sql, val)
         mydb.commit()
 
         mycursor.execute(sql, val)
         mydb.commit()
 
-    def _recognize(self, detector_model, encoder_model, img: np.ndarray, camera: Camera):
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    def _recognize(self, detector_model, encoder_model, frame: Frame, camera: Camera):
+        img_rgb = cv2.cvtColor(frame.numpy(), cv2.COLOR_BGR2RGB)
         with self.sess.graph.as_default():
             results = detector_model.detect_faces(img_rgb)
         for res in results:
@@ -278,12 +286,12 @@ class RecognitionModel(multiprocessing.Process):
                 if name == 'unknown':
                     logging.info('Unknown recognized in frame, marking attendance')
                     _ =self._unknown_recognized(
-                        encoding, img_rgb, corner_1, corner_2, camera)
+                        encoding, img_rgb, frame, corner_1, corner_2, camera)
 
                 else:
                     logging.info('{} recognized in frame, marking attendance'.format(name))
                     _ = self._known_recognized(
-                        name, encoding, img_rgb, corner_1, corner_2, camera)
+                        name, encoding, img_rgb, frame, corner_1, corner_2, camera)
             else:
                 logging.info('Move forward towards {}'.format(camera))
                 # cv2.rectangle(img_rgb, corner_1, corner_2, (0, 0, 255), 2)
@@ -291,8 +299,8 @@ class RecognitionModel(multiprocessing.Process):
                     # ' %-d %b %-y %-I:%-M %p (%f)') + '.jpg', img_rgb)
         return 
 
-    def _unknown_recognized(self, encoding, img, corner_1, corner_2, camera):
-        current_time = datetime.now()
+    def _unknown_recognized(self, encoding, img, frame:Frame, corner_1, corner_2, camera:Camera):
+        current_time = frame.datetime()
         current_dir = self.detection_config['unknown_atttendance_path'] + str(current_time.strftime('%-d %b %-y')) + '/' + str(current_time.strftime('%-I %p')) + '/'
         os.makedirs(current_dir, exist_ok=True)
 
@@ -335,7 +343,7 @@ class RecognitionModel(multiprocessing.Process):
         cv2.imwrite(file_name, img)
         return img
 
-    def _known_recognized(self, name, encoding, img, corner_1, corner_2, camera):
+    def _known_recognized(self, name, encoding, img, frame:Frame, corner_1, corner_2, camera:Camera):
         cv2.rectangle(img, corner_1, corner_2, (0, 255, 0), 2)
         cv2.putText(img, name, (corner_1[0], corner_2[1] - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 200, 200), 2)
@@ -347,7 +355,7 @@ class RecognitionModel(multiprocessing.Process):
             self.known_attendance_time[name] = datetime.now(
             ) + timedelta(seconds=180)
 
-        current_time = datetime.now()
+        current_time = frame.datetime()
         current_dir = self.detection_config['known_atttendance_path'] + current_time.strftime('%-d %b %-y') + '/' + current_time.strftime('%-I %p') + '/'
         os.makedirs(current_dir, exist_ok=True)
 
@@ -357,7 +365,7 @@ class RecognitionModel(multiprocessing.Process):
             self._update_known_attendance(name, camera, file_name)
             logging.info(
                 '{}\'s attendance recorded from {}'.format(name, camera))
-            self.known_attendance_time[name] = datetime.now()
+            self.known_attendance_time[name] = frame.datetime()
         return img
 
     def _get_encoding(self, encoder_model, face):
@@ -403,8 +411,10 @@ class RecognitionModel(multiprocessing.Process):
             try:
                 batch_file_name = self.buffer.get(timeout=10)
             except queue.Empty:
-                self.quit_event.set()
-                break
+                if self.quit_event.is_set():
+                    break
+                else:
+                    continue
             with open(batch_file_name, 'rb') as file:
                 batch = pickle.load(file)
             os.remove(batch_file_name)
@@ -412,10 +422,7 @@ class RecognitionModel(multiprocessing.Process):
             print('Received batch {}'.format(batch_file_name))
             
             for frame in batch['frames']:
-                img = Image.fromarray(frame.numpy())
-                img = np.array(img)
-                self._recognize(detector_model, encoder_model,
-                                img, frame.get_camera())
+                self._recognize(detector_model, encoder_model, frame, frame.get_camera())
             self.buffer.task_done()
             
             consumed_batches += 1

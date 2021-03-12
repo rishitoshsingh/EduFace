@@ -108,6 +108,7 @@ class StreamCamera(multiprocessing.Process):
         current_fps_counter_time = datetime.now()
         next_fps_counter_time = current_fps_counter_time + timedelta(minutes=FPS_COUNTER_INTERVAL)
         received_frames = 0
+        sent_frames = 0
         
         # for extracting first frame
         while True:
@@ -139,9 +140,10 @@ class StreamCamera(multiprocessing.Process):
             image, shape = self.get_image_from_sample(sample)
             cropped_image = self.crop_image(image)
             
-            if ( self.motion_detected or self.detect_motion(cropped_old_image, cropped_image) ) and (datetime.now() >= self.motion_timeout):
+            if ( self.motion_detected or self.detect_motion(cropped_old_image, cropped_image) ) and (datetime.now() <= self.motion_timeout):
                 frame = Frame(self.camera, datetime.now(), cropped_image, cropped_image.shape)
                 self.buffer.put(frame)
+                sent_frames += 1
             else:
                 self.motion_detected = False
             
@@ -151,10 +153,11 @@ class StreamCamera(multiprocessing.Process):
             if datetime.now() >= next_fps_counter_time:
                 delta_seconds = (datetime.now() - current_fps_counter_time).seconds 
                 print('{} producing {:4.1f} fps'.format(self.camera, received_frames / delta_seconds))
+                print('{} sent {:4.1f} fps'.format(self.camera, sent_frames / delta_seconds))
                 current_fps_counter_time = datetime.now()
                 next_fps_counter_time = current_fps_counter_time + timedelta(minutes=FPS_COUNTER_INTERVAL)
                 received_frames = 0
-                
+                sent_frames = 0                
         
         # changing state of elements if proces is terminated
         self.pipeline.set_state(Gst.State.NULL)

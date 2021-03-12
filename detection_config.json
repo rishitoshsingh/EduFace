@@ -1,6 +1,6 @@
 {
-    "recognition_threshold": 0.99,
-    "confidence_threshold": 0.4,
+    "recognition_threshold": 0.4,
+    "confidence_threshold": 0.99,
     "recognized_face_shape": [160, 160],
     "known_atttendance_path": "attendance/known_faces/",
     "unknown_atttendance_path": "attendance/unknown_faces/"
