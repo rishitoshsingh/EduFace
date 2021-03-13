@@ -5,6 +5,7 @@ from pipeline.producer import StreamCamera
 from models import Camera
 from datetime import datetime, timedelta
 import time
+import signal
 import json
 
 import multiprocessing
@@ -161,7 +162,8 @@ class BatchRecognitionManager:
         self.encoding_updater_thread.start()
     
     def kill(self):
-        self.buffer.close()
+        self.camera_batcher_buffer.close()
+        self.batcher_recognition_buffer.close()
     
     def terminate(self):
         # terminatinf encoding updater thread
@@ -171,7 +173,13 @@ class BatchRecognitionManager:
         # terminating producers and consumer processs
         for _, event in self.producer_quit_events.items():
             event.set()
+        # wait till all frames are saved in batches
+        self.camera_batcher_buffer.join()
+        # kill when frames are saved
         self.batcher_consumer_quit_event.set()
+        # wait till all recognizing batches is completed
+        self.batcher_recognition_buffer.join()
+        # kill when all batcher are analyzed
         self.recognition_consumer_quit_event.set()
         
 class BatchPicklingManager:
@@ -238,4 +246,7 @@ class BatchPicklingManager:
         # terminating producers and consumer processs
         for _, event in self.producer_quit_events.items():
             event.set()
+        # wait till all frames are saved in batches
+        self.camera_batcher_buffer.join()
+        # kill when frames are saved            
         self.batcher_consumer_quit_event.set()

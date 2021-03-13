@@ -2,6 +2,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from datetime import datetime
 import logging
+import signal
 
 logging.basicConfig(filename='eduface.log', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 logging.info('====================================================================\n\n\nEduFace started at {}'.format(datetime.now()))
