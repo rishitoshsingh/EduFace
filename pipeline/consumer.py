@@ -34,7 +34,7 @@ class SaveFrames(multiprocessing.Process):
             quit_event (multiprocessing.Event): used to trigger process to stop
             directory (str): dricetory where to save frames
         """
-        super(SaveFrames, self).__init__()
+        super(SaveFrames, self).__init__(name='SaveFrames')
         logging.info('Creating SaveFrames process')
         self.buffer = buffer
         self.directory = directory
@@ -75,7 +75,7 @@ class BatchGeneratorAndPiclker(multiprocessing.Process):
             quit_event (multiprocessing.Event): used to trigger process to stop
             diectory (str): directory where pickled objects are saved 
         """
-        super(BatchGeneratorAndPiclker, self).__init__()
+        super(BatchGeneratorAndPiclker, self).__init__(name='BatchGeneratorAndPiclker')
         logging.info('Creating BatchGeneratorAndPiclker process')
         self.inBuffer = inBuffer
         self.BATCH_SIZE = batch_size
@@ -154,7 +154,7 @@ class ViewStream(multiprocessing.Process):
             buffer (multiprocessing.JoinableQueue): Used to insert captured frame to get processed
             quit_event (multiprocessing.Event): used to trigger process to stop
         """
-        super(ViewStream, self).__init__()
+        super(ViewStream, self).__init__(name='ViewStream')
         logging.info('Creating ViewStream proces')
         self.buffer = buffer
         self.quit_event = quit_event
@@ -198,7 +198,7 @@ class RecognitionModel(multiprocessing.Process):
             quit_event (multiprocessing.Event): an event to check when to terminate this consumer process
         """
         
-        super(RecognitionModel, self).__init__()
+        super(RecognitionModel, self).__init__(name='RecognitionModel')
         logging.info('Creating RecognitionModel process')
         self.buffer = buffer
 
