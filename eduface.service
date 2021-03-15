@@ -1,10 +1,11 @@
 [Unit]
 Description=EduFace: Detect, Recognize and mark attendance
-After=mysqld.service
-Requires=mysqld.service
+After=mysql.service
+Requires=mysql.service
 
 [Service]
 WorkingDirectory=/home/edugrad/gstream-process
+User=edugrad
 ExecStart=/usr/bin/python3 /home/edugrad/gstream-process/main.py
 Restart=on-failure
 Slice=eduface.slice

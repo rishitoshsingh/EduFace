@@ -327,7 +327,7 @@ class RecognitionModel(multiprocessing.Process):
                     _ = self._known_recognized(
                         name, encoding, img_rgb, frame, corner_1, corner_2)
             else:
-                logging.info('Move forward towards {}'.format(camera))
+                logging.info('Move forward towards {}'.format(frame.get_camera()))
                 # cv2.rectangle(img_rgb, corner_1, corner_2, (0, 0, 255), 2)
                 # cv2.imwrite('frames/' + camera.get_location() + datetime.now().strftime(
                     # ' %-d %b %-y %-I:%-M %p (%f)') + '.jpg', img_rgb)

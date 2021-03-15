@@ -138,7 +138,6 @@ class BatchRecognitionManager:
                                                  self.producers_process_ready,
                                                  self.update_encodings,
                                                  encoder_model_path,
-                                                 self.BATCH_SIZE,
                                                  quit_event=self.recognition_consumer_quit_event,
                                                  **detection_config)
         

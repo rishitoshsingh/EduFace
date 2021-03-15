@@ -2,7 +2,16 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from datetime import datetime
 import logging
+from systemd.journal import JournalHandler
 import signal
+
+# for logging in journalctl
+logger = logging.getLogger(__name__)
+journald_handler = JournalHandler()
+journald_handler.setFormatter(logging.Formatter(
+    '[%(levelname)s] %(message)s'
+))
+logger.addHandler(journald_handler)
 
 logging.basicConfig(filename='eduface.log', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 logging.info('====================================================================\n\n\nEduFace started at {}'.format(datetime.now()))
@@ -23,16 +32,16 @@ with open('motion_configs.json','r') as file:
     
 encoder_model_path = 'data/model/facenet_keras.h5'
 # manager = RecognitionManager(cameras_dicts, detection_config, encoder_model_path, MAX_BUFFER = 14400)
-# manager = BatchRecognitionManager(cameras_dicts, motion_configs, detection_config, encoder_model_path, MAX_BUFFER = 500)
-manager = BatchPicklingManager(cameras_dicts, motion_configs, MAX_BUFFER = 500)
+manager = BatchRecognitionManager(cameras_dicts, motion_configs, detection_config, encoder_model_path, MAX_BUFFER = 500)
+# manager = BatchPicklingManager(cameras_dicts, motion_configs, MAX_BUFFER = 500)
+
+# signal manager to terminate EduFace
+def terminate_manager_pipeline(signalNum, frame):
+    logging.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nEduFace received termination signal from system')
+    manager.terminate()
+
 manager.start()
 
-try:
-    print('Running EduFace, Press ctrl+C to exit')
-    while True:
-        pass
-except KeyboardInterrupt:
-    print('Closing EduFace')
-
-manager.terminate()
-manager.kill()
+signal.signal(signal.SIGTERM, terminate_manager_pipeline)
+# pause main process and wait for signal from os
+signal.pause()
