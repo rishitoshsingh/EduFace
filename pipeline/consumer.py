@@ -44,7 +44,6 @@ class SaveFrames(multiprocessing.Process):
         logging.info('Running SaveFrames process')
         while not self.quit_event.is_set():
             frame = self.buffer.get(60)
-            print('Consuming {} in SaveFrames'.format(frame))
             # data = np.zeros(160,240,3)
 
             # img = Image.fromarray(frame.numpy().reshape(frame.get_shape()))
@@ -136,6 +135,7 @@ class BatchGeneratorAndPiclker(multiprocessing.Process):
                     pickle.dump(batch, file)
                 if self.outBuffer is not None:
                     self.outBuffer.put(file_name)
+                logging.info('Generated batch {}'.format(file_name))
                 batch_count += 1
                 batch = self._generate_batch(batch_count)
                 
@@ -284,6 +284,11 @@ class RecognitionModel(multiprocessing.Process):
         val = (labour_id, camera.get_id(), camera.get_location(), frame.datetime(), file_name, datetime.now())
         mycursor.execute(sql, val)
         mydb.commit()
+    
+    def _adjust_gamma(self, image, gamma = 1.0):
+        invGamma = 1.0 / gamma
+        table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
+        return cv2.LUT(image, table)
 
     def _recognize(self, detector_model, encoder_model, frame: Frame):
         """private method to detect and recognize face in frame
@@ -293,33 +298,36 @@ class RecognitionModel(multiprocessing.Process):
             encoder_model (Model): tensorflow model to encode face into vector
             frame (Frame): frame to be analyzed
         """
-        img_rgb = cv2.cvtColor(frame.numpy(), cv2.COLOR_BGR2RGB)
+        img_rgb = cv2.cvtColor(self._adjust_gamma(frame.numpy()), cv2.COLOR_BGR2RGB)
         with self.sess.graph.as_default():
             results = detector_model.detect_faces(img_rgb)
         for res in results:
             if res['confidence'] < self.detection_config['confidence_threshold']:
                 continue
             face, width, corner_1, corner_2 = utils.get_face_width(img_rgb, res['box'])
-            # cv2.imwrite('frames/temp.jpg',face)
             cam_dist = 6421 / width
             cam_dist = float(cam_dist)
             if cam_dist < 80 and cam_dist > 21:
                 encoding = self._get_encoding(encoder_model, face)
                 encoding = Normalizer('l2').transform(
                     encoding.reshape(1, -1))[0]
-                name = 'unknown'
-                distance = float("inf")
+                name = ''
+                registered_user_found = False
+                min_distance = self.detection_config['recognition_threshold']
 
                 # finding cosnie distance
                 for db_name, db_encode in self.known_encoding.items():
-                    dist = cosine(db_encode, encoding)
-                    if dist < self.detection_config['recognition_threshold'] and dist < distance:
+                    cosine_distance = cosine(db_encode, encoding)
+                    # print(db_name, cosine_distance)
+                    logging.info('{}, {}'.format(db_name, cosine_distance))
+                    if dist <= min_distance :
                         name = db_name
-                        distance = dist 
-                print(name)
-                if name == 'unknown':
+                        min_distance = cosine_distance
+                        registered_user_found = True 
+                
+                if registered_user_found == False:
                     logging.info('Unknown recognized in frame, marking attendance')
-                    _ =self._unknown_recognized(
+                    _ = self._unknown_recognized(
                         encoding, img_rgb, frame, corner_1, corner_2)
 
                 else:
@@ -468,7 +476,7 @@ class RecognitionModel(multiprocessing.Process):
             
             # try to retrieve data with timeout of 10 seconds. If buffer is empty, it will throw queue.Empty exception.
             try:
-                batch_file_name = self.buffer.get(timeout=10)
+                batch_file_name = self.buffer.get(timeout=120)
             except queue.Empty:
                 # if queue is empty, check wether quit_event is set or not
                 if self.quit_event.is_set():
@@ -480,7 +488,7 @@ class RecognitionModel(multiprocessing.Process):
                 batch = pickle.load(file)
             os.remove(batch_file_name)
             
-            print('Received batch {}'.format(batch_file_name))
+            logging.info('Received and processing batch {}'.format(batch_file_name))
             
             for frame in batch['frames']:
                 self._recognize(detector_model, encoder_model, frame)
@@ -494,9 +502,12 @@ class RecognitionModel(multiprocessing.Process):
                 bps = consumed_batches / delta_seconds 
                 fps = consumed_frames / delta_seconds
                 print('RecognitionModel consuming {:4.1f} bps'.format(bps))
+                logging.info('RecognitionModel consuming {:4.1f} bps'.format(bps))
                 print('RecognitionModel consuming {:4.1f} fps'.format(fps))
+                logging.info('RecognitionModel consuming {:4.1f} fps'.format(fps))
                 current_bps_counter_time = datetime.now()
                 next_bps_counter_time = current_bps_counter_time + timedelta(minutes=BPS_COUNTER_INTERVAL)
                 consumed_batches = 0
+                consumed_frames = 0
 
         logging.info('Terminated RecognitionModel process')

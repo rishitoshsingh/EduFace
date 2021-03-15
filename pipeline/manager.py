@@ -172,14 +172,24 @@ class BatchRecognitionManager:
         # terminating producers and consumer processs
         for _, event in self.producer_quit_events.items():
             event.set()
+        
+        for _, process in self.producer_processes.items():
+            process.terminate()
+            process.join()
+        
         # wait till all frames are saved in batches
         self.camera_batcher_buffer.join()
         # kill when frames are saved
         self.batcher_consumer_quit_event.set()
+        self.batcher_consumer_process.terminate()
+        self.batcher_consumer_process.join()
+        
         # wait till all recognizing batches is completed
         self.batcher_recognition_buffer.join()
         # kill when all batcher are analyzed
         self.recognition_consumer_quit_event.set()
+        self.recognition_consumer_process.terminate()
+        self.recognition_consumer_process.join()
         
 class BatchPicklingManager:
     """Manager which will create a pipeline consisting of StreamCamera producers and BatchGeneratorAndPiclker consumer

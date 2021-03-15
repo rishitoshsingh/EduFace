@@ -84,7 +84,7 @@ class StreamCamera(multiprocessing.Process):
                 continue
             self.motion_detected = True
             logging.info('Motion detected in {}'.format(self.camera))
-            self.motion_timeout = datetime.now() + timedelta(minutes=1)
+            self.motion_timeout = datetime.now() + timedelta(seconds=3)
             return True
         return False
 
