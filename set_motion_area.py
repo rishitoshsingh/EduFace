@@ -17,10 +17,13 @@ for camera_d in cameras_dicts:
     cameras.append(c)
 
 motion_boxes = {}
-motion_box = {
-    'corner_1': [0,0],
-    'corner_2': list(RESOLUTION)
-}
+def get_new_motion_box(corner_1, corner_2):
+    motion_box = {
+        'corner_1': corner_1,
+        'corner_2': corner_2
+    }
+    return motion_box
+motion_box = get_new_motion_box(corner_1=[0,0], corner_2=list(RESOLUTION))
         
 for camera in cameras:
     cap = VideoStream(camera.get_stream()).start()
@@ -59,6 +62,7 @@ for camera in cameras:
                 motion_box['corner_2'][0] = (motion_box['corner_2'][0] + UPDATE_NUM) % width
             elif key == 27:
                 motion_boxes.update({camera.get_id(): motion_box})
+                motion_box = get_new_motion_box(motion_box['corner_1'].copy(), motion_box['corner_2'].copy())
                 break
     except KeyboardInterrupt:
         pass
