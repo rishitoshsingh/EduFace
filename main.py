@@ -35,7 +35,6 @@ encoder_model_path = 'data/model/facenet_keras.h5'
 manager = BatchRecognitionManager(cameras_dicts, motion_configs, detection_config, encoder_model_path, MAX_BUFFER = 500)
 # manager = BatchPicklingManager(cameras_dicts, motion_configs, MAX_BUFFER = 500)
 
-
 manager.start()
 print('EduFace Started')
 

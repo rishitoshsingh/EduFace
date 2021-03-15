@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import time
 import signal
 import json
+import logging
 
 import multiprocessing
 import threading
@@ -36,8 +37,8 @@ class RecognitionManager:
             c = Camera(**camera_d)
             self.cameras.append(c)
             quit_event = multiprocessing.Event() # process to be quit
-            self.producer_processes[c.get_id] = StreamCamera(c, self.buffer, quit_event, max_idle=60)
-            self.producer_quit_events[c.get_id] = quit_event
+            self.producer_processes[c.get_id()] = StreamCamera(c, self.buffer, quit_event, max_idle=60)
+            self.producer_quit_events[c.get_id()] = quit_event
             
         self.consumer_process = RecognitionModel(self.buffer, self.consumer_process_ready, self.producer_process_ready, self.update_encodings, encoder_model_path, quit_event=self.consumer_quit_event, **detection_config)
         self.consumer_process.start()
@@ -100,6 +101,9 @@ class BatchRecognitionManager:
         self.MAX_BUFFER = MAX_BUFFER
         self.BATCH_SIZE = BATCH_SIZE
         self.BATCH_TIMEOUT_MINUTES = BATCH_TIMEOUT_MINUTES
+        self.encoder_model_path = encoder_model_path
+        self.motion_configs = motion_configs
+        self.detection_config = detection_config
         self.camera_batcher_buffer = multiprocessing.JoinableQueue(MAX_BUFFER)
         self.batcher_recognition_buffer = multiprocessing.JoinableQueue(MAX_BUFFER)
 
@@ -121,11 +125,11 @@ class BatchRecognitionManager:
         self.cameras = []
         for camera_d in cameras_dicts:
             c = Camera(**camera_d)
-            motion_config = motion_configs[str(c.get_id())]
+            motion_config = self.motion_configs[str(c.get_id())]
             self.cameras.append(c)
             quit_event = multiprocessing.Event()
-            self.producer_processes[c.get_id] = StreamCamera(c, motion_config, self.camera_batcher_buffer, quit_event, max_idle=60)
-            self.producer_quit_events[c.get_id] = quit_event
+            self.producer_processes[c.get_id()] = StreamCamera(c, motion_config, self.camera_batcher_buffer, quit_event, max_idle=60)
+            self.producer_quit_events[c.get_id()] = quit_event
 
         self.batcher_consumer_process = BatchGeneratorAndPiclker(self.camera_batcher_buffer,
                                                                  self.BATCH_SIZE,
@@ -137,13 +141,55 @@ class BatchRecognitionManager:
                                                  self.recognition_consumer_process_ready,
                                                  self.producers_process_ready,
                                                  self.update_encodings,
-                                                 encoder_model_path,
+                                                 self.encoder_model_path,
                                                  quit_event=self.recognition_consumer_quit_event,
-                                                 **detection_config)
+                                                 **self.detection_config)
         
         self.recognition_consumer_process.start()
         while not self.recognition_consumer_process_ready.is_set():
             pass
+        
+        # thread to track all process, start if it was killed unexpectedly
+        self.kill_track_process_thread = threading.Event()
+        self.track_process_thread = threading.Thread(target= self.track_processes)
+    
+    # function to track all process, create new if process was killed unexpectedly (will run as thread)
+    def track_processes(self):
+        while not self.kill_track_process_thread.is_set():
+            for c in self.cameras:
+                if (not self.producer_processes[c.get_id()].is_alive() ) and (not self.producer_quit_events[c.get_id()].is_set()):
+                    logging.info('Producer of {} was killed, restarting...'.format(c))
+                    self.producer_processes[c.get_id()] = StreamCamera(c,
+                                                                       self.motion_configs[str(c.get_id())],
+                                                                       self.camera_batcher_buffer,
+                                                                       multiprocessing.Event(),
+                                                                       max_idle=60)
+                    self.producer_processes[c.get_id()].start()
+                    logging.info('Restarted Producer of {}'.format(c))
+            
+            if (not self.batcher_consumer_process.is_alive() ) and (not self.batcher_consumer_quit_event.is_set()):
+                logging.info('Batcher consumer process was killed, restarting...')
+                self.batcher_consumer_process = BatchGeneratorAndPiclker(self.camera_batcher_buffer,
+                                                                        self.BATCH_SIZE,
+                                                                        self.BATCH_TIMEOUT_MINUTES,
+                                                                        self.batcher_recognition_buffer,
+                                                                        self.batcher_consumer_quit_event)
+                self.batcher_consumer_process.start()
+                logging.info('Restarted Batcher consumer processc')
+
+            # if (not self.recognition_consumer_process.is_alive() ) and (not self.recognition_consumer_process.is_set()):
+            #     logging.info('Recognition consumer process was killed, restarting')
+            #     self.recognition_consumer_process = RecognitionModel(self.batcher_recognition_buffer,
+            #                                                         self.recognition_consumer_process_ready,
+            #                                                         self.producers_process_ready,
+            #                                                         self.update_encodings,
+            #                                                         self.encoder_model_path,
+            #                                                         quit_event=self.recognition_consumer_quit_event,
+            #                                                         **self.detection_config)
+            #     self.recognition_consumer_process.start()
+            #     logging.info('Restarted Recognition consumer process')
+            time.sleep(60)
+        logging.info('Terminating tracking all process thread')
         
     def set_update_encoding_event(self):
         while not self.kill_encoding_updater_thread.is_set():
@@ -159,6 +205,7 @@ class BatchRecognitionManager:
         self.batcher_consumer_process.start()
         
         self.encoding_updater_thread.start()
+        self.track_process_thread.start()
     
     def kill(self):
         self.camera_batcher_buffer.close()
@@ -168,6 +215,9 @@ class BatchRecognitionManager:
         # terminatinf encoding updater thread
         self.kill_encoding_updater_thread.set()
         self.encoding_updater_thread.join()
+        
+        self.kill_track_process_thread.set()
+        self.track_process_thread.join()
         
         # terminating producers and consumer processs
         for _, event in self.producer_quit_events.items():
@@ -228,8 +278,8 @@ class BatchPicklingManager:
             motion_config = motion_configs[str(c.get_id())]
             self.cameras.append(c)
             quit_event = multiprocessing.Event()
-            self.producer_processes[c.get_id] = StreamCamera(c, motion_config, self.camera_batcher_buffer, quit_event, max_idle=60)
-            self.producer_quit_events[c.get_id] = quit_event
+            self.producer_processes[c.get_id()] = StreamCamera(c, motion_config, self.camera_batcher_buffer, quit_event, max_idle=60)
+            self.producer_quit_events[c.get_id()] = quit_event
 
         self.batcher_consumer_process = BatchGeneratorAndPiclker(self.camera_batcher_buffer,
                                                                  self.BATCH_SIZE,

@@ -83,7 +83,7 @@ class StreamCamera(multiprocessing.Process):
             if area < self.detection_area_threshold:
                 continue
             self.motion_detected = True
-            logging.info('Motion detected in {}'.format(self.camera))
+            # logging.info('Motion detected in {}'.format(self.camera))
             self.motion_timeout = datetime.now() + timedelta(seconds=3)
             return True
         return False
