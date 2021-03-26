@@ -285,7 +285,7 @@ class RecognitionModel(multiprocessing.Process):
         mycursor.execute(sql, val)
         mydb.commit()
     
-    def _adjust_gamma(self, image, gamma = 1.0):
+    def _adjust_gamma(self, image, gamma = 1.10):
         invGamma = 1.0 / gamma
         table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
         return cv2.LUT(image, table)
@@ -302,12 +302,13 @@ class RecognitionModel(multiprocessing.Process):
         with self.sess.graph.as_default():
             results = detector_model.detect_faces(img_rgb)
         for res in results:
+            # print('confidence ', res['confidence'])
             if res['confidence'] < self.detection_config['confidence_threshold']:
                 continue
             face, width, corner_1, corner_2 = utils.get_face_width(img_rgb, res['box'])
             cam_dist = 6421 / width
             cam_dist = float(cam_dist)
-            if cam_dist < 80 and cam_dist > 21:
+            if cam_dist > 11:
                 encoding = self._get_encoding(encoder_model, face)
                 encoding = Normalizer('l2').transform(
                     encoding.reshape(1, -1))[0]
@@ -319,7 +320,6 @@ class RecognitionModel(multiprocessing.Process):
                 for db_name, db_encode in self.known_encoding.items():
                     cosine_distance = cosine(db_encode, encoding)
                     # print(db_name, cosine_distance)
-                    logging.info('{}, {}'.format(db_name, cosine_distance))
                     if cosine_distance <= min_distance :
                         name = db_name
                         min_distance = cosine_distance
@@ -382,12 +382,12 @@ class RecognitionModel(multiprocessing.Process):
             self._update_unknown_attendance(unknown_name, encoding)
             self.unknown_attendance_time[unknown_name] = False
 
-        cv2.rectangle(img, corner_1, corner_2, (255, 0, 0), 2)
-        cv2.putText(img, unknown_name,
-                    (corner_1[0], corner_2[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 200), 2)
-        file_name = current_dir + unknown_name + '-' + frame.get_camera().get_location() + '-' + current_time.strftime('%-I:%-M %p (%f)') + '.jpg'
-        logging.info('{} recognized from {}'.format(unknown_name, frame.get_camera()))
-        cv2.imwrite(file_name, img)
+        # cv2.rectangle(img, corner_1, corner_2, (255, 0, 0), 2)
+        # cv2.putText(img, unknown_name,
+        #             (corner_1[0], corner_2[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 200), 2)
+        # file_name = current_dir + unknown_name + '-' + frame.get_camera().get_location() + '-' + current_time.strftime('%-I:%-M %p (%f)') + '.jpg'
+        # logging.info('{} recognized from {}'.format(unknown_name, frame.get_camera()))
+        # cv2.imwrite(file_name, img)
         return img
 
     def _known_recognized(self, name, encoding, img, frame:Frame, corner_1, corner_2):
@@ -400,14 +400,14 @@ class RecognitionModel(multiprocessing.Process):
         else:
             self.known_attendance_data[name] = 1
             self.known_attendance_time[name] = datetime.now(
-            ) + timedelta(seconds=180)
+            ) + timedelta(seconds=5)
 
         # creating directory to save image
         current_time = frame.datetime()
         current_dir = self.detection_config['known_atttendance_path'] + current_time.strftime('%-d %b %-y') + '/' + current_time.strftime('%-I %p') + '/'
         os.makedirs(current_dir, exist_ok=True)
 
-        if self.known_attendance_data[name] > 2 and (current_time - self.known_attendance_time[name]).seconds >= 180:
+        if self.known_attendance_data[name] > 2 and (current_time - self.known_attendance_time[name]).seconds >= 5:
             file_name = current_dir + name + '-' + frame.get_camera().get_location() + '-' + current_time.strftime('%-I:%-M %p (%f)') + '.jpg'
             cv2.imwrite(file_name, img)
             self._update_known_attendance(name, frame, file_name)

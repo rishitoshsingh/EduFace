@@ -55,7 +55,7 @@ class StreamCamera(multiprocessing.Process):
         # self.Gthread = Thread(target=self.main_loop.run)
         # self.Gthread.start()
         # self.pipeline = Gst.parse_launch("rtspsrc location={} ! autovideosink".format(self.camera.get_stream()))
-        pipeline_str = "uridecodebin uri={} uridecodebin0::source::latency=300 ! videoscale ! video/x-raw,width=1280,height=720 ! videoconvert !  video/x-raw, format=RGB ! appsink name={}".format(self.camera.get_stream(), self.camera.get_id())
+        pipeline_str = "uridecodebin uri={} uridecodebin0::source::latency=300 ! videoconvert !  video/x-raw, format=RGB ! appsink name={}".format(self.camera.get_stream(), self.camera.get_id())
         # pipeline_str = "rtspsrc location={} ! queue ! rtph265depay ! h265parse ! avdec_h265 ! videoconvert !  video/x-raw, format=RGB ! appsink name={}".format(self.camera.get_stream(), self.camera.get_id())
         self.pipeline = Gst.parse_launch(pipeline_str)
         self.appsink = self.pipeline.get_by_name("{}".format(self.camera.get_id()))
@@ -84,7 +84,7 @@ class StreamCamera(multiprocessing.Process):
                 continue
             self.motion_detected = True
             # logging.info('Motion detected in {}'.format(self.camera))
-            self.motion_timeout = datetime.now() + timedelta(seconds=3)
+            self.motion_timeout = datetime.now() + timedelta(seconds=7)
             return True
         return False
 
