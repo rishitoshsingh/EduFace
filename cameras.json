@@ -7,26 +7,26 @@
 	{
         "cameraId": 102,
         "location": "Entry-2",
-        "uri": "rtsp://admin:edugrad_123@192.168.1.48:554/Streaming/Channels/101"
+        "uri": "rtsp://admin:edugrad_123@192.168.1.102:554/Streaming/Channels/101"
     },
 	{
         "cameraId": 103,
         "location": "Entry-3",
-        "uri": "rtsp://admin:edugrad_123@192.168.1.49:554/Streaming/Channels/101"
+        "uri": "rtsp://admin:edugrad_123@192.168.1.103:554/Streaming/Channels/101"
     },
 	{
         "cameraId": 201,
         "location": "Exit-1",
-        "uri": "rtsp://admin:edugrad_123@192.168.1.45:554/Streaming/Channels/101"
+        "uri": "rtsp://admin:edugrad_123@192.168.1.201:554/Streaming/Channels/101"
     },
 	{
         "cameraId": 202,
         "location": "Exit-2",
-        "uri": "rtsp://admin:edugrad_123@192.168.1.46:554/Streaming/Channels/101"
+        "uri": "rtsp://admin:edugrad_123@192.168.1.202:554/Streaming/Channels/101"
     },
 	{
         "cameraId": 203,
         "location": "Exit-3",
-        "uri": "rtsp://admin:edugrad_123@192.168.1.44:554/Streaming/Channels/101"
+        "uri": "rtsp://admin:edugrad_123@192.168.1.203:554/Streaming/Channels/101"
     }
 ]
